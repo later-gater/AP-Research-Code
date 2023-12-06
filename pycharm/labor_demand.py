@@ -23,6 +23,13 @@ def neg_profit(variables, alpha, beta, A, wage, rate):
     return -1 * ((A * (labor ** alpha) * (capital ** beta)) - ((labor*wage) + (capital*rate)))
 
 
+def profit_gradient(variables, alpha, beta, A, wage, rate):
+    labor, capital = variables
+    dL = A * alpha * (L**(alpha-1)) * (K**beta)
+    dK = A * beta * (K**(beta-1)) * (L**alpha)
+    return np.hstack([dL, dK])
+
+
 L, K = np.meshgrid(np.linspace(1, 10, 100), np.linspace(1, 10, 100), indexing='ij')
 
 W, R = np.meshgrid(np.linspace(0.1, 5, 50), np.linspace(0.1, 5, 50), indexing='ij')
@@ -32,7 +39,7 @@ cost_values = cost_function(L, K, wage, rate)
 profit_values = np.subtract(production_values, cost_values)
 
 start_time = time.time()
-max_profit_funcs = np.vectorize(lambda w, r: minimize(neg_profit, np.array([1.0, 1.0]), args=(alpha, beta, A, w, r), method='L-BFGS-B', bounds=[(0.1, None), (0.1, None)])).__call__(W, R)
+max_profit_funcs = np.vectorize(lambda w, r: minimize(neg_profit, np.array([1.0, 1.0]), args=(alpha, beta, A, w, r), method='L-BFGS-B', jac=profit_gradient, bounds=[(0.1, None), (0.1, None)]))(W, R)
 
 max_profit_values = np.full_like(W, fill_value=None, dtype=np.float32)
 
@@ -41,7 +48,7 @@ mapped_profits = np.full_like(W, fill_value=None, dtype=np.dtype)
 successes = 0
 for i, row in enumerate(max_profit_funcs):
     for j, cell in enumerate(row):
-        if cell.success:
+        if cell.success and -cell.fun < 10**15:
             max_profit_values[i, j] = -cell.fun
             mapped_profits[i, j] = (W[i, j], R[i, j], max_profit_values[i, j])
             successes += 1
