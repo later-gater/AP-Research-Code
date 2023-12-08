@@ -25,9 +25,9 @@ def neg_profit(variables, alpha, beta, A, wage, rate):
 
 def profit_gradient(variables, alpha, beta, A, wage, rate):
     labor, capital = variables
-    dL = A * alpha * (L**(alpha-1)) * (K**beta)
-    dK = A * beta * (K**(beta-1)) * (L**alpha)
-    return np.hstack([dL, dK])
+    dL = -A * alpha * (labor**(alpha-1)) * (capital**beta) + wage
+    dK = -A * beta * (capital**(beta-1)) * (labor**alpha) + rate
+    return np.array([dL, dK])
 
 
 L, K = np.meshgrid(np.linspace(1, 10, 100), np.linspace(1, 10, 100), indexing='ij')
@@ -54,9 +54,9 @@ for i, row in enumerate(max_profit_funcs):
             successes += 1
         else:
             mapped_profits[i, j] = (W[i, j], R[i, j], None)
-end_time = time.time()
 
-total_time = end_time-start_time
+total_time = time.time()-start_time
+
 
 fig = plt.figure()
 #
