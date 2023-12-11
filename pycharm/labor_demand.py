@@ -30,6 +30,15 @@ def profit_gradient(variables, alpha, beta, A, wage, rate):
     return np.array([dL, dK])
 
 
+def min_cost_function(variables, alpha, beta, A, wage, rate):
+    # doesn't appear to be any better than neg_profits, just slower
+    partA = neg_profit(variables, alpha, beta, A, wage, rate)
+    partB = wage**(alpha/(alpha+beta))
+    partC = rate**(beta/(alpha+beta))
+    partD = ((alpha/beta)**(beta/(alpha+beta)))+((beta/alpha)**(alpha/(alpha+beta)))
+    return partA*partB*partC*partD
+
+
 L, K = np.meshgrid(np.linspace(1, 10, 100), np.linspace(1, 10, 100), indexing='ij')
 
 W, R = np.meshgrid(np.linspace(0.1, 5, 50), np.linspace(0.1, 5, 50), indexing='ij')
