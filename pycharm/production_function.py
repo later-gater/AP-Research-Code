@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import fsolve, minimize
 import pandas as pd
+import time
 
 def production_function(variables, A, alpha, time, price):
 
@@ -57,104 +58,49 @@ def main():
     A = 5
     alpha = 0.75
     time = 1
-    price = 4
 
-    W, R = np.meshgrid(np.linspace(0.1, 10, 100), np.linspace(0.1, 10, 100))
+    W = np.linspace(0.1, 10, 100)
+    R = np.linspace(0.1, 10, 100)
+    P = np.linspace(0.1, 10, 100)
 
     mapped_roots_fsolve = []
-    roots_fsolve = np.full_like(W, fill_value=None, dtype=np.dtype)
+    roots_fsolve = np.full_like([[P for r in R] for w in W], fill_value=None, dtype=np.dtype)
 
-    mapped_roots_min = []
-    roots_min = np.full_like(W, fill_value=None, dtype=np.dtype)
+    pass
 
-    mapped_roots_const = []
-    roots_const = np.full_like(W, fill_value=None, dtype=np.dtype)
+    for i, wage in enumerate(W):
+        print(f'w: {wage}')
+        for j, rate in enumerate(R):
+            for k, price in enumerate(P):
 
-    for i, w in enumerate(W):
-        for j, r in enumerate(R):
-            wage = w[i]
-            rate = r[j]
+                roots_fsolve[i, j, k] = fsolve(production_gradient, x0=np.array([100.,100.]), args=(A, alpha, time, wage, rate, price))
+                labor_fsolve = roots_fsolve[i][j][k][0]
+                capital_fsolve = roots_fsolve[i][j][k][1]
+                R_fsolve = production_function([labor_fsolve, capital_fsolve], A, alpha, time, price)
+                Y_fsolve = R_fsolve/price
+                LC_fsolve = labor_fsolve * wage
+                KC_fsolve = capital_fsolve * rate
+                TC_fsolve = LC_fsolve + KC_fsolve
+                AC_fsolve = TC_fsolve / Y_fsolve
+                P_fsolve = R_fsolve - TC_fsolve
+                mapped_roots_fsolve.append({
+                    "w": wage,
+                    "r": rate,
+                    "p": price,
+                    "L": labor_fsolve,
+                    "K": capital_fsolve,
+                    "Y": Y_fsolve,
+                    "R": R_fsolve,
+                    "LC": LC_fsolve,
+                    "KC": KC_fsolve,
+                    "TC": TC_fsolve,
+                    "P": P_fsolve,
+                    "AC": AC_fsolve
+                })
+                pass
 
-            roots_fsolve[i, j] = fsolve(production_gradient, x0=np.array([100.,100.]), args=(A, alpha, time, wage, rate, price))
-            labor_fsolve = roots_fsolve[i][j][0]
-            capital_fsolve = roots_fsolve[i][j][1]
-            Y_fsolve = production_function([labor_fsolve, capital_fsolve], A, alpha, time, price)
-            LC_fsolve = labor_fsolve * wage
-            KC_fsolve = capital_fsolve * rate
-            TC_fsolve = LC_fsolve + KC_fsolve
-            AC_fsolve = TC_fsolve / Y_fsolve
-            P_fsolve = (Y_fsolve * price) - TC_fsolve
-            mapped_roots_fsolve.append({
-                "W": wage,
-                "R": rate,
-                "L": labor_fsolve,
-                "K": capital_fsolve,
-                "Y": Y_fsolve,
-                "LC": LC_fsolve,
-                "KC": KC_fsolve,
-                "TC": TC_fsolve,
-                "P": P_fsolve,
-                "AC": AC_fsolve
-            })
-
-            roots_min[i, j] = minimize(neg_profit_function, x0=np.array([100., 100.]),
-                                       args=(A, alpha, time, wage, rate, price), jac=production_gradient,
-                                       method="L-BFGS-B", bounds=[(0.1, None), (0.1, None)])
-            success_min = roots_min[i][j].success
-            labor_min = roots_min[i][j].x[0]
-            capital_min = roots_min[i][j].x[1]
-            Y_min = roots_min[i][j].fun * -1
-            LC_min = labor_min * wage
-            KC_min = capital_min * rate
-            TC_min = LC_min + KC_min
-            AC_min = TC_min / Y_min
-            P_min = (Y_min * price) - TC_min
-            mapped_roots_min.append({
-                "Success": success_min,
-                "W": wage,
-                "R": rate,
-                "L": labor_min,
-                "K": capital_min,
-                "Y": Y_min,
-                "LC": LC_min,
-                "KC": KC_min,
-                "TC": TC_min,
-                "P": P_min,
-                "AC": AC_min
-            })
-
-            # TODO: must minimize cost_function subject to production function
-            roots_const[i, j] = minimize(cost_function, x0=np.array([100., 100.]),
-                                       args=(A, alpha, time, wage, rate, price), jac=production_gradient,
-                                       bounds=[(0.1, None), (0.1, None)],
-                                       constraints=({'type': 'eq', 'fun': production_function, 'args': (A, alpha, time, price)}))
-            success_const = roots_const[i][j].success
-            labor_const = roots_const[i][j].x[0]
-            capital_const = roots_const[i][j].x[1]
-            Y_const = roots_const[i][j].fun * -1
-            LC_const = labor_const * wage
-            KC_const = capital_const * rate
-            TC_const = LC_const + KC_const
-            AC_const = TC_const / Y_const
-            P_const = (Y_const * price) - TC_const
-            mapped_roots_const.append({
-                "Success": success_const,
-                "W": wage,
-                "R": rate,
-                "L": labor_const,
-                "K": capital_const,
-                "Y": Y_const,
-                "LC": LC_const,
-                "KC": KC_const,
-                "TC": TC_const,
-                "P": P_const,
-                "AC": AC_const
-            })
-            print(f"progress: {i}, {j}")
 
     gradient_roots = pd.DataFrame(mapped_roots_fsolve)
-    min_roots = pd.DataFrame(mapped_roots_min)
-    const_roots = pd.DataFrame(mapped_roots_const)
 
 
     fig = plt.figure()
