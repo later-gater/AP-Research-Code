@@ -1,7 +1,7 @@
 import numpy as np
-from scipy.optimize import fsolve, minimize, OptimizeResult
+from scipy.optimize import fsolve, minimize, OptimizeResult, least_squares, brute
 import matplotlib.pyplot as plt
-
+import pandas as pd
 
 def production_function(variables, A, alpha, time) -> int:
     labor, capital = variables
@@ -28,7 +28,26 @@ def product_demand(price) -> int:
     return 10 - (0.5*price)
 
 def labor_supply(wage) -> int:
-    return 5 + wage**1.2
+    return -1 + wage**1.2
+
+def equilibrium_curve_2(variables, A, alpha, time, rate):
+    price, wage = variables
+    max_profit, production = get_max_profit(A, alpha, time, wage, rate, price)
+    quantity_curve = (production - product_demand(price)) ** 2
+    labor_curve = (labor_supply(wage) - max_profit.x[0]) ** 2
+    print(f"Price: {price}, Wage: {wage}, Quantity: {quantity_curve}, Labor: {labor_curve}")
+    return [quantity_curve, labor_curve]
+
+def equilibrium_curve_test(variables, A, alpha, time, rate):
+    price, wage = variables
+    max_profit, production = get_max_profit(A, alpha, time, wage, rate, price)
+    quantity_curve = (production - product_demand(price)) ** 2
+    labor_curve = (labor_supply(wage) - max_profit.x[0]) ** 2
+    print(f"Price: {price}, Wage: {wage}, Quantity: {quantity_curve}, Labor: {labor_curve}, Cost: {quantity_curve + labor_curve}")
+    return quantity_curve + labor_curve
+
+def find_equilibrium_2(A, alpha, time, rate):
+    return least_squares(equilibrium_curve_2, np.array([10, 10]), args=(A, alpha, time, rate), bounds=[(0.2, 0.2), (100, 100)], xtol=1e-10, ftol=1e-10, gtol=1e-10)
 
 def equilibrium_curve(price, A, alpha, time, wage, rate):
     max_profit, production = get_max_profit(A, alpha, time, wage, rate, price)
@@ -44,9 +63,15 @@ def main():
     alpha = 0.75
     time = 1
     wage = 1.2
-    rate = 0.8
+    rate = 6
     price = 2.5
 
+    foo = find_equilibrium_2(A, alpha, time, rate)
+    print("\n\n\n\n\n")
+    bar = minimize(equilibrium_curve_test, np.array([10, 10]), bounds=((0.2, None), (0.2, None)), args=(A, alpha, time, rate))
+    pass
+
+    # print(production_function([10, 10], A, alpha, time))
     # L = np.linspace(0.1, 5, 50)
     # K = np.linspace(0.1, 5, 50)
     # inputs = np.meshgrid(L, K)
@@ -72,44 +97,62 @@ def main():
     #     ax.scatter(max_profit.x[0], max_profit.x[1], -max_profit.fun, color="red")
     #     plt.show()
 
-    inputs = np.linspace(1, 7.5, 100)
-    optimized_results = []
-    demand_curve = product_demand(inputs)
-    for i in inputs:
-        optimized_results.append(get_max_profit(A, alpha, time, wage, rate, i))
-        equilibrium_curve(i, A, alpha, time, wage, rate)
+    # price_wage = np.meshgrid(np.linspace(1, 7.5, 100), np.linspace(1, 7.5, 100))
+    # profits = np.full_like(price_wage[0], fill_value=None, dtype=np.dtype)
+    # dict = []
+    # for i in range(len(price_wage[0])):
+    #     for j in range(len(price_wage[0][i])):
+    #         minimized, production = get_max_profit(A, alpha, time, price_wage[1][i][j], rate, price_wage[0][i][j])
+    #         profits[i][j] = -minimized.fun
+    #         print(f"Price: {price_wage[0][i][j]}, Wage: {price_wage[1][i][j]}, Production: {production}, Profit: {minimized.fun}, Labor: {minimized.x[0]}, Capital: {minimized.x[1]}")
+    #         # store what is printed in a vals dataframe
+    #         dict.append({
+    #             "Price": price_wage[0][i][j],
+    #             "Wage": price_wage[1][i][j],
+    #             "Production": production,
+    #             "Profit": -minimized.fun,
+    #             "Labor": minimized.x[0],
+    #             "Capital": minimized.x[1]
+    #         })
+    #
+    # vals = pd.DataFrame(dict)
 
+    # vals = pd.read_pickle("price_wage_df.pkl")
+
+    # fig = plt.figure()
+    #
+    # ax = fig.add_subplot(1, 1, 1, projection="3d")
+    # ax.plot_surface(vals["Price"].to_numpy().reshape(100, 100), vals["Wage"].to_numpy().reshape(100, 100), vals["Labor"].to_numpy().reshape(100, 100), cmap="viridis")
+    # ax.set_xlabel("Price")
+    # ax.set_ylabel("Wage")
+    # ax.set_zlabel("Labor Demand")
+    #
+    #
+    # plt.show()
+
+    labor_capital = np.meshgrid(np.linspace(0.1, 10, 100), np.linspace(0.1, 10, 100), indexing="ij")
+    productions = production_function(labor_capital, A, alpha, time)
+    profits = profit_function(labor_capital, A, alpha, time, wage, rate, price)
+    minimized, production = get_max_profit(A, alpha, time, wage, rate, price)
     fig = plt.figure()
 
-    ax = fig.add_subplot(4, 1, 1)
-    ax.plot(inputs, np.array([-i[0].fun for i in optimized_results]), color="red")
-    # ax.plot(inputs, demand_curve, color="blue")
-    # ax.plot(inputs, np.array([-result[0].fun - demand_curve[i] for i, result in enumerate(optimized_results)]), color="green")
-    # ax.plot(inputs, np.array([0 for i in inputs]), color="black")
-    ax.scatter(find_equilibrium(A, alpha, time, wage, rate), 0, color="green")
-    ax.set_xlabel("Price")
-    ax.set_ylabel("Profit")
-
-    ax = fig.add_subplot(4, 1, 2)
-    ax.plot(inputs, np.array([result[1] for i, result in enumerate(optimized_results)]), color="red")
-    ax.plot(inputs, demand_curve, color="blue")
-    # ax.plot(inputs, np.array([result[1]-demand_curve[i] for i, result in enumerate(optimized_results)]), color="green")
-    # ax.plot(inputs, np.array([0 for i in inputs]), color="black")
-    ax.scatter(find_equilibrium(A, alpha, time, wage, rate), product_demand(find_equilibrium(A, alpha, time, wage, rate)), color="green")
-    ax.set_xlabel("Price")
-    ax.set_ylabel("Quantity Produced")
-
-    ax = fig.add_subplot(4, 1, 3)
-    ax.plot(inputs, np.array([i[0].x[0] for i in optimized_results]), color="blue")
-    ax.set_xlabel("Price")
-    ax.set_ylabel("Labor")
-
-    ax = fig.add_subplot(4, 1, 4)
-    ax.plot(inputs, np.array([i[0].x[1] for i in optimized_results]), color="blue")
-    ax.set_xlabel("Price")
+    ax = fig.add_subplot(121, projection="3d")
+    ax.plot_surface(labor_capital[0], labor_capital[1], productions, cmap="viridis")
+    ax.set_xlabel("Labor")
     ax.set_ylabel("Capital")
+    ax.set_zlabel("Production")
 
+    ax = fig.add_subplot(122, projection="3d")
+    ax.plot_surface(labor_capital[0], labor_capital[1], profits, cmap="viridis")
+    ax.scatter(minimized.x[0], minimized.x[1], -minimized.fun, color="red")
+    ax.set_xlabel("Labor")
+    ax.set_ylabel("Capital")
+    ax.set_zlabel("Profit")
     plt.show()
+
+    # ax = fig.add_subplot(133, projection="3d")
+
+    pass
 
 if __name__ == "__main__":
     main()
