@@ -2,13 +2,18 @@ import nevergiveup
 import matplotlib.pyplot as plt
 import numpy as np
 
-price = 4.646180753165138
-wage = 3.200454742912416
+price = 9.6
+wage = 2.9
 
 A = 5
-alpha = 0.75
+alpha_1 = 0.75
+alpha_2 = 0.75
+eos_1 = 0.75
+eos_2 = 0.75
+constants = (alpha_1, alpha_2, eos_1, eos_2)
 time = 1
-rate = 6
+rate_k = 6
+rate_z = 3
 
 ranges = np.linspace(0.1, 20, 100)
 quantity_supply = []
@@ -19,20 +24,20 @@ labor_demand = []
 for i in ranges:
 
     # given wage
-    max_profit, production = nevergiveup.get_max_profit(A, alpha, time, wage, rate, i)
+    max_profit, production = nevergiveup.get_max_profit(constants, time, A, wage, rate_k, rate_z, i)
 
     quantity_supply.append(production)
     quantity_demand.append(nevergiveup.product_demand(i))
 
     # given price
-    max_profit, production = nevergiveup.get_max_profit(A, alpha, time, i, rate, price)
+    max_profit, production = nevergiveup.get_max_profit(constants, time, A, i, rate_k, rate_z, price)
 
 
     labor_supply.append(nevergiveup.labor_supply(i))
     labor_demand.append(max_profit.x[0])
 
 
-max_profit, production = nevergiveup.get_max_profit(A, alpha, time, wage, rate, price)
+max_profit, production = nevergiveup.get_max_profit(constants, time, A, wage, rate_k, rate_z, price)
 
 
 fig = plt.figure()
