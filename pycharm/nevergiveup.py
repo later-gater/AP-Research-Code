@@ -16,7 +16,7 @@ def production_function(variables: tuple[float, float, float], constants: tuple[
 def profit_function(variables: tuple[float, float, float], constants: tuple[float, float, float, float],
                     time: float, A: float, wage: float, rate_k: float, rate_z: float, price: float) -> float:
     labor, capital, robots = variables
-    # alpha_1, alpha_2, eos_1, eos_2, time, A = constants
+    # alpha_1, alpha_2, eos_1, eos_2, time, A = constant
     revenue = price * production_function(variables, constants, time, A)
     costs = (wage * labor) + (rate_k * capital) + (rate_z * robots)
     profit = revenue - costs
@@ -80,9 +80,9 @@ def main():
     rate_z = 3
     price = 2.5
 
-    # foo = find_equilibrium_2(constants, A, time, rate_k, rate_z)
+    # foo = find_equilibrium_2(constant, A, time, rate_k, rate_z)
     # print("\n\n\n\n\n")
-    # bar = minimize(equilibrium_curve_test, np.array([10, 10]), bounds=((0.2, None), (0.2, None)), args=(constants, A, time, rate_k, rate_z))
+    # bar = minimize(equilibrium_curve_test, np.array([10, 10]), bounds=((0.2, None), (0.2, None)), args=(constant, A, time, rate_k, rate_z))
     # return foo, bar
     ans = brute(equilibrium_curve_test, (slice(0.2, 15, 0.01), slice(0.2, 15, 0.01)), args=(constants, A, time, rate_k, rate_z), full_output=False, finish=None, workers=1)
     print(ans)
@@ -120,8 +120,8 @@ def main():
     # l_costs = np.full_like(price_wage[0], fill_value=None, dtype=np.dtype)
     # for i in range(len(price_wage[0])):
     #     for j in range(len(price_wage[1][i])):
-    #         costs[i][j] = equilibrium_curve_test((price_wage[0][i][j], price_wage[1][i][j]), constants, A, time, rate_k, rate_z)
-    #         q_costs[i][j], l_costs[i][j] = equilibrium_curve_2((price_wage[0][i][j], price_wage[1][i][j]), constants, A, time, rate_k, rate_z)
+    #         costs[i][j] = equilibrium_curve_test((price_wage[0][i][j], price_wage[1][i][j]), constant, A, time, rate_k, rate_z)
+    #         q_costs[i][j], l_costs[i][j] = equilibrium_curve_2((price_wage[0][i][j], price_wage[1][i][j]), constant, A, time, rate_k, rate_z)
     #
     # fig = plt.figure()
     #

@@ -5,7 +5,7 @@ import pandas as pd
 class Consumer:
 
     instances = {}
-    max_time = 24
+    max_time = 5
 
     def __init__(self):
         self.alpha = 0.75 # alpha close to 1 -> leisure is not very important (work a lot), alpha close to 0 -> leisure is very important (work less)
