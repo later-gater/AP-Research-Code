@@ -7,6 +7,9 @@ from typing import Callable, Sequence
 import matplotlib.pyplot as plt
 import numpy as np
 
+# EQUILIBRIUM IS IDEAL FOR THE MONOPOLISTIC FIRM BC GOOD'S SUPPLY CURVE (WHICH HAS MAXIMIZED PROFIT; i.e. ANY OTHER PRODUCTION QUANTITY IS INEFFICIENT)
+# IS EQUAL TO THE GOOD'S DEMAND CURVE, SO EVERYTHING PRODUCED WILL BE SOLD (UNDER IDEALIZED PROFIT CONDITION)
+
 
 def costs(variables: tuple[float, float],
           constant: tuple[float, float, float, float],
