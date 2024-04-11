@@ -1,47 +1,148 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy.optimize import minimize
 
 class Consumer:
 
     instances = {}
-    max_time = 5
+    max_time = 1 # maximum amount of hours you can work
 
-    def __init__(self):
-        self.alpha = 0.75 # alpha close to 1 -> leisure is not very important (work a lot), alpha close to 0 -> leisure is very important (work less)
-        self.income = 120 # higher income -> less importance of working
+    def __init__(self, name="consumer", non_wage_income=50, p_leisure=0.6, p_good=0.35, p_save=0.05):
+        self.name = name
+        self.non_wage_income = non_wage_income
+        # higher non_wage_income -> less importance of working
         # https://open.lib.umn.edu/principleseconomics/chapter/12-2-the-supply-of-labor/
         # https://saylordotorg.github.io/text_introduction-to-economic-analysis/s14-01-labor-supply.html
+
+
+        self.p_leisure = p_leisure
+        self.p_good = p_good
+        self.p_save = p_save
+
+        # preferences must add up to 1
+
+
+
+        self.num_goods = 0
+        self.money_saved = 0
+        self.leisure = self.max_time
+        self.time_working = 0
+        self.util = 0
+
+        self.demands = (0, 0, 0)
+
+        self.money = self.non_wage_income
+        self.starting_money = self.non_wage_income
+
         Consumer.instances[self] = self
 
-    def utility_func(self, q_good: float, q_work: float) -> float:
-        return (q_good**self.alpha) * (q_work**(1-self.alpha))
 
-    def good_demand(self, cost_good: float, cost_work: float) -> float: # cost_good = price of good, cost_work = -wage
-        return (self.income + (cost_work * self.max_time)) / (cost_good * (1 + ((1-self.alpha) / self.alpha)))
+    def utility_func(self, q_good: float, q_leisure: float, q_save: float) -> float:
+        return (self.p_good * (q_good ** 0.5)) + (self.p_leisure * (q_leisure ** 0.5)) + (self.p_save * (q_save ** 0.5))
 
-    def work_demand(self, cost_good: float, cost_work: float) -> float: # cost_good = price of good, cost_work = -wage
-        # individual work_demand == individual labor_supply
-        return np.fmax(0., (self.alpha * self.max_time) - ((1-self.alpha) * (self.income / cost_work)))
+    def set_util(self):
+        self.util = self.utility_func(self.num_goods, self.leisure, self.money_saved)
 
-    @classmethod
-    def get_total_good_demand(cls, cost_good: float, cost_work: float) -> float: # cost_good = price of good, cost_work = -wage
-        return sum([cls.instances[instance].good_demand(cost_good, cost_work) for instance in cls.instances])
+    def additional_utilit_function(self, q_good: float, q_leisure: float, q_save: float) -> float:
+        return (self.p_good * ((q_good + self.num_goods) ** 0.5)) + (self.p_leisure * ((q_leisure + self.leisure) ** 0.5)) + (self.p_save * ((q_save + self.money_saved) ** 0.5))
 
-    @classmethod
-    def get_total_work_demand(cls, cost_good: float, cost_work: float) -> float: # cost_good = price of good, cost_work = -wage
-        # total work_demand == total labor_supply
-        return sum([cls.instances[instance].work_demand(cost_good, cost_work) for instance in cls.instances])
+    def good_demand(self, cost_good: float, cost_work: float, cost_save: float) -> float:
+        # returns quantity of good willing to buy
+        return ((self.money + (self.max_time * cost_work)) /
+                (cost_good * (1 + (((self.p_leisure / self.p_good) ** 2) * (cost_good / cost_work)) +
+                              (((self.p_save / self.p_good) ** 2) * (cost_good / cost_save)))))
 
-    @classmethod
-    def get_total_utility(cls, q_good: float, q_work: float) -> float:
-        return sum([cls.instances[instance].utility_func(q_good, q_work) for instance in cls.instances])
+    def leisure_demand(self, cost_good: float, cost_work: float, cost_save: float) -> float: # cost_work = wage
+        # returns leisure wanted
+        return ((self.money + (self.max_time * cost_work)) /
+                (cost_work * (1 + (((self.p_good / self.p_leisure) ** 2) * (cost_work / cost_good)) +
+                (((self.p_save / self.p_leisure) ** 2) * (cost_work / cost_save)))))
 
-def main():
+    def work_demand(self, cost_good: float, cost_work: float, cost_save: float) -> float:
+        return np.fmax(0., self.max_time - self.leisure_demand(cost_good, cost_work, cost_save))
+
+    def save_demand(self, cost_good: float, cost_work: float, cost_save: float) -> float:
+        return ((self.money + (self.max_time * cost_work)) /
+                (cost_save * (1 + (((self.p_good / self.p_save) ** 2) * (cost_save / cost_good)) +
+                              (((self.p_leisure / self.p_save) ** 2) * (cost_save / cost_work)))))
+
+    def get_demands(self, cost_good: float, cost_work: float, cost_save: float) -> (float, float, float):
+        return (self.good_demand(cost_good, cost_work, cost_save),
+                self.work_demand(cost_good, cost_work, cost_save),
+                self.save_demand(cost_good, cost_work, cost_save))
+    
+    
+    # def additional_good_demand(self, cost_good: float, cost_work: float, cost_save: float) -> float:
+    #     return ((self.money + (self.leisure * cost_work)  + (self.money_saved * cost_save) + (self.num_goods * cost_good)) / # since self.leisure is init at self.max_time, I tink this may cause an issue. i also think since prices fluctuate there may be issues here: top row may have to be something like "money already spent" rather than the prices of things bought
+    #             (cost_good * (1 + (((self.p_leisure / self.p_good) ** 2) * (cost_good / cost_work)) + (((self.p_save / self.p_good) ** 2) * (cost_good / cost_save))))) - self.num_goods
+    #
+    # def additional_leisure_demand(self, cost_good: float, cost_work: float, cost_save: float) -> float:
+    #     return ((self.money + (self.leisure * cost_work)  + (self.money_saved * cost_save) + (self.num_goods * cost_good)) / # since self.leisure is init at self.max_time, I tink this may cause an issue. i also think since prices fluctuate there may be issues here: top row may have to be something like "money already spent" rather than the prices of things bought
+    #             (cost_work * (1 + (((self.p_good / self.p_leisure) ** 2) * (cost_work / cost_good)) + (((self.p_save / self.p_leisure) ** 2) * (cost_work / cost_save)))) - self.leisure)
+    #
+    # def additional_save_demand(self, cost_good: float, cost_work: float, cost_save: float) -> float:
+    #     return ((self.money + (self.leisure * cost_work)  + (self.money_saved * cost_save) + (self.num_goods * cost_good)) / # since self.leisure is init at self.max_time, I tink this may cause an issue. i also think since prices fluctuate there may be issues here: top row may have to be something like "money already spent" rather than the prices of things bought
+    #             (cost_save * (1 + (((self.p_good / self.p_save) ** 2) * (cost_save / cost_good)) + (((self.p_leisure / self.p_save) ** 2) * (cost_save / cost_work)))) - self.money_saved)
+
+    # def optimize(self, cost_good: float, cost_work: float, cost_save: float):
+    #     return minimize(lambda x: -1 * self.utility_func(x[0], x[1], x[2]),
+    #              x0=np.array([1, 1, 1]),
+    #              bounds=[(0, None), (0, None), (0, None)],
+    #              constraints={'type': 'eq', 'fun': lambda x: (cost_good * x[0]) + (cost_work * x[1]) + (cost_save * x[2]) - (self.non_wage_income + (self.max_time * cost_work))})
+
+    def purchase(self, quantity: float, price: float):
+        self.money -= quantity * price
+        self.num_goods += quantity
+
+    def work(self, hours: float, wage: float):
+        self.money += hours * wage
+        self.time_working += hours
+        self.leisure -= hours
+
+    def save(self, save: float):
+        self.money -= save
+        self.money_saved += save
+
+    def max_purchase(self, price: float) -> float:
+        return self.money / price
+
+    def next_year(self, i_r: float):
+        self.starting_money = self.non_wage_income + (self.money_saved * (1 + i_r))
+        self.money = self.starting_money
+        self.num_goods = 0
+        self.money_saved = 0
+        self.leisure = self.max_time
+        self.time_working = 0
+        self.util = 0
+
+    def restart(self):
+        self.money = self.non_wage_income
+        self.num_goods = 0
+        self.money_saved = 0
+        self.leisure = self.max_time
+        self.time_working = 0
+        self.util = 0
+
+
+    # @classmethod
+    # def get_total_good_demand(cls, cost_good: float, cost_work: float) -> float: # cost_good = price of good, cost_work = -wage
+    #     return sum([cls.instances[instance].good_demand(cost_good, cost_work) for instance in cls.instances])
+    #
+    # @classmethod
+    # def get_total_work_demand(cls, cost_good: float, cost_work: float) -> float: # cost_good = price of good, cost_work = -wage
+    #     # total work_demand == total labor_supply
+    #     return sum([cls.instances[instance].work_demand(cost_good, cost_work) for instance in cls.instances])
+    #
+    # @classmethod
+    # def get_total_utility(cls, q_good: float, q_work: float) -> float:
+    #     return sum([cls.instances[instance].utility_func(q_good, q_work) for instance in cls.instances])
+
+def old_graphs():
     consumer1 = Consumer()
     # consumer2 = Consumer()
-    # print(f"Good Weight 1: {consumer1.good_weight}, Time Weight 1: {consumer1.work_weight}, Income 1: {consumer1.income}")
-    # print(f"Good Weight 2: {consumer2.good_weight}, Time Weight 2: {consumer2.work_weight}, Income 2: {consumer2.income}")
+    # print(f"Good Weight 1: {consumer1.good_weight}, Time Weight 1: {consumer1.work_weight}, Income 1: {consumer1.non_wage_income}")
+    # print(f"Good Weight 2: {consumer2.good_weight}, Time Weight 2: {consumer2.work_weight}, Income 2: {consumer2.non_wage_income}")
 
     hold_price = np.linspace(5,5,100)
 
@@ -53,7 +154,7 @@ def main():
     ax = fig.add_subplot(111)
     for alpha in income_range:
         consumer1.alpha = alpha
-        work_demand = consumer1.work_demand(hold_price, wage_range)
+        work_demand = consumer1.leisure_demand(hold_price, wage_range)
         # good_demand = consumer1.good_demand(wage_range, hold_price)
         # df.loc[len(df)] = [alpha, wage_range, work_demand]
         ax.plot(wage_range, work_demand, label=f"Work Alpha: {alpha}")
@@ -64,76 +165,155 @@ def main():
 
     plt.show()
 
-    # G, T = np.meshgrid(np.linspace(1, 10, 100), np.linspace(1, 10, 100))
-    #
-    # U1 = consumer1.utility_func(G, T)
-    # g1_demand = consumer1.good_demand(G, T)
-    # w1_demand = consumer1.work_demand(G, T)
-    #
-    # U2 = consumer2.utility_func(G, T)
-    # g2_demand = consumer2.good_demand(G, T)
-    # w2_demand = consumer2.work_demand(G, T)
-    #
-    # UT = Consumer.get_total_utility(G, T)
-    # gT_demand = Consumer.get_total_good_demand(G, T)
-    # wT_demand = Consumer.get_total_work_demand(G, T)
-    #
-    # fig = plt.figure()
-    # ax = fig.add_subplot(331, projection='3d')
-    # ax.plot_surface(G, T, U1, cmap="viridis")
-    # ax.set_xlabel("Good")
-    # ax.set_ylabel("Time")
-    # ax.set_zlabel("Utility 1")
-    #
-    # ax = fig.add_subplot(332, projection='3d')
-    # ax.plot_surface(G, T, g1_demand, cmap="viridis")
-    # ax.set_xlabel("Cost Good")
-    # ax.set_ylabel("Cost Time")
-    # ax.set_zlabel("Good Demand 1")
-    #
-    # ax = fig.add_subplot(333, projection='3d')
-    # ax.plot_surface(G, T, w1_demand, cmap="viridis")
-    # ax.set_xlabel("Cost Good")
-    # ax.set_ylabel("Cost Time")
-    # ax.set_zlabel("Time Demand 1")
-    #
-    # ax = fig.add_subplot(334, projection='3d')
-    # ax.plot_surface(G, T, U2, cmap="viridis")
-    # ax.set_xlabel("Good")
-    # ax.set_ylabel("Time")
-    # ax.set_zlabel("Utility 2")
-    #
-    # ax = fig.add_subplot(335, projection='3d')
-    # ax.plot_surface(G, T, g2_demand, cmap="viridis")
-    # ax.set_xlabel("Cost Good")
-    # ax.set_ylabel("Cost Time")
-    # ax.set_zlabel("Good Demand 2")
-    #
-    # ax = fig.add_subplot(336, projection='3d')
-    # ax.plot_surface(G, T, w2_demand, cmap="viridis")
-    # ax.set_xlabel("Cost Good")
-    # ax.set_ylabel("Cost Time")
-    # ax.set_zlabel("Time Demand 2")
-    #
-    # ax = fig.add_subplot(337, projection='3d')
-    # ax.plot_surface(G, T, UT, cmap="viridis")
-    # ax.set_xlabel("Good")
-    # ax.set_ylabel("Time")
-    # ax.set_zlabel("Utility T")
-    #
-    # ax = fig.add_subplot(338, projection='3d')
-    # ax.plot_surface(G, T, gT_demand, cmap="viridis")
-    # ax.set_xlabel("Cost Good")
-    # ax.set_ylabel("Cost Time")
-    # ax.set_zlabel("Good Demand T")
-    #
-    # ax = fig.add_subplot(339, projection='3d')
-    # ax.plot_surface(G, T, wT_demand, cmap="viridis")
-    # ax.set_xlabel("Cost Good")
-    # ax.set_ylabel("Cost Time")
-    # ax.set_zlabel("Time Demand T")
-    #
-    # plt.show()
+def older_graphs():
+    consumer1 = Consumer()
+    consumer2 = Consumer()
+
+    G, T = np.meshgrid(np.linspace(1, 10, 100), np.linspace(1, 10, 100))
+
+    U1 = consumer1.utility_func(G, T)
+    g1_demand = consumer1.good_demand(G, T)
+    w1_demand = consumer1.leisure_demand(G, T)
+
+    U2 = consumer2.utility_func(G, T)
+    g2_demand = consumer2.good_demand(G, T)
+    w2_demand = consumer2.leisure_demand(G, T)
+
+    UT = Consumer.get_total_utility(G, T)
+    gT_demand = Consumer.get_total_good_demand(G, T)
+    wT_demand = Consumer.get_total_work_demand(G, T)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(331, projection='3d')
+    ax.plot_surface(G, T, U1, cmap="viridis")
+    ax.set_xlabel("Good")
+    ax.set_ylabel("Time")
+    ax.set_zlabel("Utility 1")
+
+    ax = fig.add_subplot(332, projection='3d')
+    ax.plot_surface(G, T, g1_demand, cmap="viridis")
+    ax.set_xlabel("Cost Good")
+    ax.set_ylabel("Cost Time")
+    ax.set_zlabel("Good Demand 1")
+
+    ax = fig.add_subplot(333, projection='3d')
+    ax.plot_surface(G, T, w1_demand, cmap="viridis")
+    ax.set_xlabel("Cost Good")
+    ax.set_ylabel("Cost Time")
+    ax.set_zlabel("Time Demand 1")
+
+    ax = fig.add_subplot(334, projection='3d')
+    ax.plot_surface(G, T, U2, cmap="viridis")
+    ax.set_xlabel("Good")
+    ax.set_ylabel("Time")
+    ax.set_zlabel("Utility 2")
+
+    ax = fig.add_subplot(335, projection='3d')
+    ax.plot_surface(G, T, g2_demand, cmap="viridis")
+    ax.set_xlabel("Cost Good")
+    ax.set_ylabel("Cost Time")
+    ax.set_zlabel("Good Demand 2")
+
+    ax = fig.add_subplot(336, projection='3d')
+    ax.plot_surface(G, T, w2_demand, cmap="viridis")
+    ax.set_xlabel("Cost Good")
+    ax.set_ylabel("Cost Time")
+    ax.set_zlabel("Time Demand 2")
+
+    ax = fig.add_subplot(337, projection='3d')
+    ax.plot_surface(G, T, UT, cmap="viridis")
+    ax.set_xlabel("Good")
+    ax.set_ylabel("Time")
+    ax.set_zlabel("Utility T")
+
+    ax = fig.add_subplot(338, projection='3d')
+    ax.plot_surface(G, T, gT_demand, cmap="viridis")
+    ax.set_xlabel("Cost Good")
+    ax.set_ylabel("Cost Time")
+    ax.set_zlabel("Good Demand T")
+
+    ax = fig.add_subplot(339, projection='3d')
+    ax.plot_surface(G, T, wT_demand, cmap="viridis")
+    ax.set_xlabel("Cost Good")
+    ax.set_ylabel("Cost Time")
+    ax.set_zlabel("Time Demand T")
+
+    plt.show()
+
+def demand_graphs(): # not updated
+    consumer1 = Consumer()
+
+    P, W = np.meshgrid(np.linspace(1, 10, 100), np.linspace(1, 10, 100))
+
+    G = consumer1.good_demand(P, W, constants.interest_rate)
+    L = consumer1.leisure_demand(P, W, constants.interest_rate)
+    S = consumer1.save_demand(P, W, constants.interest_rate)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(131, projection='3d')
+    ax.plot_surface(P, W, G, cmap="viridis")
+    ax.set_xlabel("Price")
+    ax.set_ylabel("Wage")
+    ax.set_zlabel("Good Demand")
+
+    ax = fig.add_subplot(132, projection='3d')
+    ax.plot_surface(P, W, L, cmap="viridis")
+    ax.set_xlabel("Price")
+    ax.set_ylabel("Wage")
+    ax.set_zlabel("Labor Demand")
+
+    ax = fig.add_subplot(133, projection='3d')
+    ax.plot_surface(P, W, S, cmap="viridis")
+    ax.set_xlabel("Price")
+    ax.set_ylabel("Wage")
+    ax.set_zlabel("Save Demand")
+
+    plt.show()
+
+def main():
+    consumer1 = Consumer()
+
+    lin = np.linspace(1, 20, 100)
+
+    wage = 2
+
+    df = pd.DataFrame(columns=["Price", "Goods", "Labor", "Save", "Leisure", "Interest", "Money"])
+
+    for i in lin:
+        # demands = consumer1.optimize(i, wage, constants.interest_rate)
+        goods = consumer1.good_demand(i, wage, constants.interest_rate)
+        # a_goods = consumer1.additional_good_demand(i, wage, constants.interest_rate)
+        # consumer1.purchase(goods, i)
+        leisure = consumer1.leisure_demand(wage, i, constants.interest_rate)
+        # consumer1.work(labor, wage)
+        save = consumer1.save_demand(i, wage, constants.interest_rate)
+        # consumer1.purchase(goods, i)
+        # consumer1.work(consumer1.max_time - leisure, wage)
+        # consumer1.save(save, constants.interest_rate)
+
+        # print(f"Price: {i}, Goods: {demands.x[0]}, Labor: {demands.x[1]}, Save: {demands.x[2]}")
+        df.loc[len(df)] = [i, goods, consumer1.max_time - leisure, constants.interest_rate * save, leisure, save, consumer1.money]
+        # consumer1.restart()
+
+    print("pass")
+
+    fig = plt.figure()
+
+    ax = fig.add_subplot(111)
+    ax.plot(df["Price"], df["Goods"], color="red", label="Goods")
+    ax.plot(df["Price"], df["Labor"], color="blue", label="Labor")
+    ax.plot(df["Price"], df["Save"], color="green", label="Save")
+
+    ax.set_xlabel("Price")
+    ax.set_ylabel("Quantity")
+
+    ax.legend()
+
+    plt.show()
+
+
+
+
 
 if __name__ == "__main__":
     main()
