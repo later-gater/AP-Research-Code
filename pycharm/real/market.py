@@ -90,23 +90,10 @@ class Market:
 def run_market(index, file_name, alpha_2, eos_1, eos_2, robot_growth_func, rate_k, rate_z, incomes):
     print(f"Running Market {file_name}")
     var = {
-            "index": index,
-            "file_name": file_name,
-            "alpha_1": 0.35,
-            "alpha_2": alpha_2,
-            "eos_1": eos_1,
-            "eos_2": eos_2,
-            "robot_growth_func": robot_growth_func,
-            "A": 20,
-            "time": 1,
-            "rate_k": rate_k,
-            "rate_z": rate_z,
-            "interest_rate": 0.02,
-            "incomes": incomes,
-            "p_leisure": 0.425,
-            "p_good": 0.425,
-            "p_save": 0.05
-        }
+            "index": index, "file_name": file_name, "alpha_1": 0.35, "alpha_2": alpha_2, "eos_1": eos_1,
+            "eos_2": eos_2, "robot_growth_func": robot_growth_func, "A": 20, "time": 1, "rate_k": rate_k,
+            "rate_z": rate_z, "interest_rate": 0.02, "incomes": incomes, "p_leisure": 0.425, "p_good": 0.425, "p_save": 0.05
+          }
 
     good_firm = firm.Firm(var["alpha_1"], var["alpha_2"], var["eos_1"], var["eos_2"])
 
@@ -114,9 +101,13 @@ def run_market(index, file_name, alpha_2, eos_1, eos_2, robot_growth_func, rate_
     middle = consumer.Consumer("middle", var["incomes"][1], var["p_leisure"], var["p_good"], var["p_save"])
     lower = consumer.Consumer("lower", var["incomes"][2], var["p_leisure"], var["p_good"], var["p_save"])
 
-    market = Market([good_firm], [upper, middle, lower], {x:var[x] for x in ["A", "time", "rate_k", "rate_z", "interest_rate", "robot_growth_func"]})
+    market = Market([good_firm], [upper, middle, lower],
+                    {x:var[x] for x in ["A", "time", "rate_k", "rate_z", "interest_rate", "robot_growth_func"]})
 
-    data = pd.DataFrame(columns=["Convergence Error", "Money in Circulation", "Firm Money", "Leftover Goods", "Firm Labor Demand", "Firm Capital Demand", "Firm Robot Demand", "Robot Growth", "Price", "Wage", "Consumer Start Moneys", "Utils", "Times Worked", "Leisure", "Money Earned", "Goods Purchased", "Money Spent", "Money Saved", "Interest Earned"])
+    data = pd.DataFrame(columns=["Convergence Error", "Money in Circulation", "Firm Money", "Leftover Goods",
+                                 "Firm Labor Demand", "Firm Capital Demand", "Firm Robot Demand", "Robot Growth",
+                                 "Price", "Wage", "Consumer Start Moneys", "Utils", "Times Worked", "Leisure",
+                                 "Money Earned", "Goods Purchased", "Money Spent", "Money Saved", "Interest Earned"])
     for i in range(8):
         data = market.run_market(data)
         print(f"year {i + 1} completed")

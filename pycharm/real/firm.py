@@ -1,7 +1,5 @@
-from typing import Callable
-
 import numpy as np
-from scipy.optimize import fsolve, minimize, OptimizeResult, basinhopping
+from scipy.optimize import minimize, OptimizeResult
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -54,22 +52,6 @@ class Firm:
 							 constraints={'type': 'ineq', 'fun': lambda x: self.money - self.cost_function(x, wage, rate_k, rate_z)})
 		return minimized, self.production_function(minimized.x, time, A, robot_growth), self.cost_function(minimized.x, wage, rate_k, rate_z)
 
-	def equilibrium_cost(self, variables: tuple[float, float], constant: tuple[float, float, float, float],
-						 good_demand_func: Callable, labor_supply_func: Callable):
-		price, wage = variables
-
-
-	# def get_optimum_production(self, constant: tuple[float, float, float, float], demand_func: Callable):
-	# 	minimized = basinhopping(lambda x: -1 * min(self.max_profit(constant, x[0], x[1]), demand_func(x)) * x[0], [1, 1], )
-
-	@classmethod
-	def get_total_production(cls, constant: tuple[float, float, float, float], price: float, wage: float) -> float:
-		return sum([cls.instances[instance].max_profit(constant, price, wage)[1] for instance in cls.instances])
-
-	@classmethod
-	def get_total_demands(cls, constant: tuple[float, float, float, float], price: float, wage: float) -> (float, float, float):
-		demands = [cls.instances[instance].max_profit(constant, price, wage)[0] for instance in cls.instances]
-		return sum([demand.x[0] for demand in demands]), sum([demand.x[1] for demand in demands]), sum([demand.x[2] for demand in demands])
 
 def main():
 	firm = Firm()

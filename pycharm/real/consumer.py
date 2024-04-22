@@ -44,9 +44,6 @@ class Consumer:
     def set_util(self):
         self.util = self.utility_func(self.num_goods, self.leisure, self.money_saved)
 
-    def additional_utilit_function(self, q_good: float, q_leisure: float, q_save: float) -> float:
-        return (self.p_good * ((q_good + self.num_goods) ** 0.5)) + (self.p_leisure * ((q_leisure + self.leisure) ** 0.5)) + (self.p_save * ((q_save + self.money_saved) ** 0.5))
-
     def good_demand(self, cost_good: float, cost_work: float, cost_save: float) -> float:
         # returns quantity of good willing to buy
         return ((self.money + (self.max_time * cost_work)) /
@@ -71,25 +68,6 @@ class Consumer:
         return (self.good_demand(cost_good, cost_work, cost_save),
                 self.work_demand(cost_good, cost_work, cost_save),
                 self.save_demand(cost_good, cost_work, cost_save))
-    
-    
-    # def additional_good_demand(self, cost_good: float, cost_work: float, cost_save: float) -> float:
-    #     return ((self.money + (self.leisure * cost_work)  + (self.money_saved * cost_save) + (self.num_goods * cost_good)) / # since self.leisure is init at self.max_time, I tink this may cause an issue. i also think since prices fluctuate there may be issues here: top row may have to be something like "money already spent" rather than the prices of things bought
-    #             (cost_good * (1 + (((self.p_leisure / self.p_good) ** 2) * (cost_good / cost_work)) + (((self.p_save / self.p_good) ** 2) * (cost_good / cost_save))))) - self.num_goods
-    #
-    # def additional_leisure_demand(self, cost_good: float, cost_work: float, cost_save: float) -> float:
-    #     return ((self.money + (self.leisure * cost_work)  + (self.money_saved * cost_save) + (self.num_goods * cost_good)) / # since self.leisure is init at self.max_time, I tink this may cause an issue. i also think since prices fluctuate there may be issues here: top row may have to be something like "money already spent" rather than the prices of things bought
-    #             (cost_work * (1 + (((self.p_good / self.p_leisure) ** 2) * (cost_work / cost_good)) + (((self.p_save / self.p_leisure) ** 2) * (cost_work / cost_save)))) - self.leisure)
-    #
-    # def additional_save_demand(self, cost_good: float, cost_work: float, cost_save: float) -> float:
-    #     return ((self.money + (self.leisure * cost_work)  + (self.money_saved * cost_save) + (self.num_goods * cost_good)) / # since self.leisure is init at self.max_time, I tink this may cause an issue. i also think since prices fluctuate there may be issues here: top row may have to be something like "money already spent" rather than the prices of things bought
-    #             (cost_save * (1 + (((self.p_good / self.p_save) ** 2) * (cost_save / cost_good)) + (((self.p_leisure / self.p_save) ** 2) * (cost_save / cost_work)))) - self.money_saved)
-
-    # def optimize(self, cost_good: float, cost_work: float, cost_save: float):
-    #     return minimize(lambda x: -1 * self.utility_func(x[0], x[1], x[2]),
-    #              x0=np.array([1, 1, 1]),
-    #              bounds=[(0, None), (0, None), (0, None)],
-    #              constraints={'type': 'eq', 'fun': lambda x: (cost_good * x[0]) + (cost_work * x[1]) + (cost_save * x[2]) - (self.non_wage_income + (self.max_time * cost_work))})
 
     def purchase(self, quantity: float, price: float):
         self.money -= quantity * price
@@ -125,18 +103,6 @@ class Consumer:
         self.util = 0
 
 
-    # @classmethod
-    # def get_total_good_demand(cls, cost_good: float, cost_work: float) -> float: # cost_good = price of good, cost_work = -wage
-    #     return sum([cls.instances[instance].good_demand(cost_good, cost_work) for instance in cls.instances])
-    #
-    # @classmethod
-    # def get_total_work_demand(cls, cost_good: float, cost_work: float) -> float: # cost_good = price of good, cost_work = -wage
-    #     # total work_demand == total labor_supply
-    #     return sum([cls.instances[instance].work_demand(cost_good, cost_work) for instance in cls.instances])
-    #
-    # @classmethod
-    # def get_total_utility(cls, q_good: float, q_work: float) -> float:
-    #     return sum([cls.instances[instance].utility_func(q_good, q_work) for instance in cls.instances])
 
 def old_graphs():
     consumer1 = Consumer()

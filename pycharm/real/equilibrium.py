@@ -1,4 +1,4 @@
-from scipy.optimize import differential_evolution, OptimizeResult, basinhopping, minimize, brute
+from scipy.optimize import OptimizeResult, minimize
 import firm
 import consumer
 import new_graphs
